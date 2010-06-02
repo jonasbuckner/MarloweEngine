@@ -1,3 +1,5 @@
+from Room import Room
+
 class Player:
     " Describe, move, and store the Player "
     def __init__(self):
@@ -42,11 +44,13 @@ class Player:
             return None
     
     def Pickup(self, item):
+        " Pickup an Item from the world. "
         # TODO: Add check to ensure that this is a real item
         self.inventory.append(item)
         return "You picked up " + item + "."
     
     def Drop(self, item):
-        # TODO: Add check to ensure that this is actually in the inventory
-        self.inventory.remove(item) 
-        return "You've dropped " + item + "."
+        " Drop an item from the inventory"
+        if (item in self.inventory):
+            self.inventory.remove(item) 
+            return "You've dropped " + item + "."
