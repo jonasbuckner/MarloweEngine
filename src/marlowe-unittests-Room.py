@@ -29,6 +29,19 @@ class TestRoom(unittest.TestCase):
         room.AddExit(room.directionNorth)
         self.assertEqual(room.GetExits(), [room.directionNorth])
         
+    def testRoom_roomDoesntAddFalseExits(self):
+        " If given a false exit to add, do we return gracefully? "
+        room = Room.Room()
+        room.AddExit("Blernsday")
+        self.assertEqual(room.GetExits(), [])
+        
+    def testRoom_roomDoesntAddRedundantExits(self):
+        " Make sure we don't add an exit twice. "
+        room = Room.Room()
+        room.AddExit(room.directionNorth)
+        room.AddExit(room.directionNorth)
+        self.assertEqual(room.GetExits(), [room.directionNorth])
+        
     def testRoom_roomCanRemoveExit(self):
         " Does the RemoveExit(direction) method work? "
         room = Room.Room()
@@ -36,6 +49,13 @@ class TestRoom(unittest.TestCase):
         room.AddExit(room.directionSouth)
         room.RemoveExit(room.directionNorth)
         self.assertEqual(room.GetExits(), [room.directionSouth])
+        
+    def testRoom_roomReturnsFromFalseRemove(self):
+        " If given a false or redundant exit to remove, do we handle it gracefully? "
+        room = Room.Room()
+        room.AddExit(room.directionDown)
+        room.RemoveExit(room.directionDown)
+        room.RemoveExit(room.directionDown)
         
     def testRoom_roomCanGetItems(self):
         " Does the GetItems() method return a list of Items? "

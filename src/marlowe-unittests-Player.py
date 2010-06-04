@@ -84,9 +84,10 @@ class TestPlayer(unittest.TestCase):
         player.Move(player.directionWest)
         player.Move(player.directionUp)
         currRoom = player.GetCurrentRoom()
-        self.assertEquals(currRoom[0], currentX - 1)
-        self.assertEqual(currRoom[1], currentY + 1)
-        self.assertEqual(currRoom[2], currentZ + 1)
+        self.assertEqual(currRoom,
+                         (currentX - 1,
+                          currentY + 1,
+                          currentZ + 1))
         
     def testPlayer_playerShowInventory(self):
         " Does Player.ShowInventory() show the inventory? "

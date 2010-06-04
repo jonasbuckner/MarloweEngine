@@ -1,4 +1,4 @@
-from Room import Room
+from direction import valid_directions
 
 class Player:
     " Describe, move, and store the Player "
@@ -18,23 +18,18 @@ class Player:
         
     def Move(self, direction):
         " Move in the specified direction. "
-        if (direction == "north"):
-            self.posY += 1
-        elif (direction == "south"):
-            self.posY -= 1
-        elif (direction == "east"):
-            self.posX += 1
-        elif (direction == "west"):
-            self.posX -= 1
-        elif (direction == "up"):
-            self.posZ += 1
-        elif (direction == "down"):
-            self.posZ -= 1
+        for dir in valid_directions:
+            if (dir['name'] == direction):
+                self.posX += dir['delta'][0]
+                self.posY += dir['delta'][1]
+                self.posZ += dir['delta'][2]
             
     def GetCurrentRoom(self):
+        # TODO: Change when World class is implemented
         return (self.posX, self.posY, self.posZ)
 
     def GetInventory(self):
+        " Returns the list of inventory items. "
         return self.inventory
     
     def GetInventoryItem(self, item):

@@ -1,4 +1,4 @@
-
+from direction import valid_directions
 
 class Room:
     " Defines the Rooms of the world "
@@ -24,8 +24,10 @@ class Room:
     
     def AddExit(self, direction):
         " Add an exit to the list of exits. Hopefully it's already valid. "
-        # TODO: Check for exit validity
-        self.exits.append(direction)
+        for dir in valid_directions:
+            if dir['name'] == direction:
+                if direction not in self.exits:
+                    self.exits.append(direction)
         
     def RemoveExit(self, direction):
         " Remove an exit "
