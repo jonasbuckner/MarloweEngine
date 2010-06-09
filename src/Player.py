@@ -4,26 +4,23 @@ class Player:
     " Describe, move, and store the Player "
     def __init__(self):
         self.inventory = []
-        
+
         self.posX = 0
         self.posY = 0
         self.posZ = 0
-        
-        self.directionNorth = "north"
-        self.directionSouth = "south"
-        self.directionEast = "east"
-        self.directionWest = "west"
-        self.directionUp = "up"
-        self.directionDown = "down"
-        
+
     def Move(self, direction):
-        " Move in the specified direction. "
+        """ Move in the specified direction.
+        
+        This takes a human-readable string value, checked against the
+        valid_directions property of the direction class. 
+        """
         for dir in valid_directions:
             if (dir['name'] == direction):
                 self.posX += dir['delta'][0]
                 self.posY += dir['delta'][1]
                 self.posZ += dir['delta'][2]
-            
+
     def GetCurrentRoom(self):
         # TODO: Change when World class is implemented
         return (self.posX, self.posY, self.posZ)
@@ -31,21 +28,22 @@ class Player:
     def GetInventory(self):
         " Returns the list of inventory items. "
         return self.inventory
-    
+
     def GetInventoryItem(self, item):
         if item in self.inventory:
             return item
         else:
             return None
-    
+
     def Pickup(self, item):
         " Pickup an Item from the world. "
         # TODO: Add check to ensure that this is a real item
         self.inventory.append(item)
-        return "You picked up " + item + "."
-    
+        return "You picked up " + item.GetName() + "."
+
     def Drop(self, item):
         " Drop an item from the inventory"
+        # TODU: Drop item into player's current room
         if (item in self.inventory):
-            self.inventory.remove(item) 
-            return "You've dropped " + item + "."
+            self.inventory.remove(item)
+            return "You've dropped " + item.GetName() + "."
