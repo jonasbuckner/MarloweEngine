@@ -51,6 +51,7 @@ class TestItem(unittest.TestCase):
         " Does a new item warn if empty? "
         # self.assertRaises(TypeError, self.item_empty)
         self.assertEqual(self.item_empty.GetName(), "UNDEFINED ITEM NAME - This is a bug.")
+        self.assertEqual(self.item_empty.GetDescription(), "UNDEFINED ITEM DESCRIPTION - This is a bug.")
 
     def testItem_itemFailsWithoutAName(self):
         " Does a new item fail without a name variable? "

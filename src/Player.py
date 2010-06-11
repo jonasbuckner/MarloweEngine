@@ -1,7 +1,7 @@
 from direction import valid_directions
 
 class Player:
-    " Describe, move, and store the Player "
+    """Describe, move, and store the Player"""
     def __init__(self):
         self.inventory = []
 
@@ -10,7 +10,7 @@ class Player:
         self.posZ = 0
 
     def Move(self, direction):
-        """ Move in the specified direction.
+        """Move in the specified direction.
         
         This takes a human-readable string value, checked against the
         valid_directions property of the direction class. 
@@ -22,27 +22,29 @@ class Player:
                 self.posZ += dir['delta'][2]
 
     def GetCurrentRoom(self):
+        """Returns an object reference to the player's current room"""
         # TODO: Change when World class is implemented
         return (self.posX, self.posY, self.posZ)
 
     def GetInventory(self):
-        " Returns the list of inventory items. "
+        """Returns the list of inventory items."""
         return self.inventory
 
     def GetInventoryItem(self, item):
+        """Returns an individual Item object from the player's inventory"""
         if item in self.inventory:
             return item
         else:
             return None
 
     def Pickup(self, item):
-        " Pickup an Item from the world. "
+        """Pickup an Item from the world."""
         # TODO: Add check to ensure that this is a real item
         self.inventory.append(item)
         return "You picked up " + item.GetName() + "."
 
     def Drop(self, item):
-        " Drop an item from the inventory"
+        """Drop an item from the inventory"""
         # TODU: Drop item into player's current room
         if (item in self.inventory):
             self.inventory.remove(item)

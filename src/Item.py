@@ -1,5 +1,3 @@
-import warnings
-
 class Item(object):
     """ Creates Items in the Game World 
     
@@ -13,19 +11,19 @@ class Item(object):
         self.description = description
 
     def GetName(self):
-        " Get the item's name. "
+        """Get the item's name."""
         return self.name
 
     def SetName(self, name):
-        " Set the item's name. "
+        """Set the item's name."""
         # TODO: Fail if item already exists in world.
         self.name = name
 
     def GetDescription(self):
-        " Get the item's current description. "
+        """Get the item's current description."""
         return self.description
 
     def SetDescription(self, description):
-        " Set the item's description. "
+        """Set the item's description."""
         # TODO: Warn if description is a duplicate with another item.
         self.description = description
