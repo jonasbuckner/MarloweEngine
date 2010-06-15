@@ -45,4 +45,4 @@ class TestWorld(unittest.TestCase):
         room = Room.Room(self.first_room_name, self.first_room_description)
         for x in self.first_room_exits:
             room.AddExit(x)
-        self.assertEqual(World.GetRoom(self.fr_x, self.fr_y, self.fr_z), room)
+        self.assertEqual(World.GetRoom(self.fr_x, self.fr_y, self.fr_z).GetTitle(), room.GetTitle())
