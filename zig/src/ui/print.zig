@@ -16,6 +16,14 @@ pub fn Printer(comptime Frontend: type) type {
             };
         }
 
+        pub fn setup(self: Self) !void {
+            try self.frontend.setup();
+        }
+
+        pub fn teardown(self: Self) !void {
+            try self.frontend.teardown();
+        }
+
         // Forward write calls to the frontend
         pub fn write(self: Self, text: []const u8) !usize {
             return self.frontend.write(text);

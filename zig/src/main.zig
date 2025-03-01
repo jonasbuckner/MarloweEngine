@@ -11,6 +11,7 @@ const Room = @import("room.zig").Room;
 
 const posix = std.posix;
 const printer = print.create_printer(&tui.instance);
+const master_writer = std.io.getStdOut().writer(); // TODO: remove when possible
 
 const Character = struct {
     inventory: [1]Item,
@@ -27,29 +28,12 @@ const World = struct {
     map: Map,
 };
 
-const CLEAR_SCREEN = "\x1b[2J";
-const HOME_POSITION = "\x1b[1H";
-const MOVE_CURSOR_FMT = "\x1b[{};{}H";
-const master_writer = std.io.getStdOut().writer();
-
-inline fn Bold() []const u8 {
-    return "\x1b[1m";
-}
-
-inline fn Reset() []const u8 {
-    return "\x1b[22m";
-}
-
-fn move_cursor(x: u32, y: u32) !void {
-    try master_writer.print(MOVE_CURSOR_FMT, .{ y, x });
-}
-
 fn print_current_room(player: Character) !void {
     _ = try printer.write(player.location.title);
 
     _ = try printer.print_at_location(.{ .x = 2, .y = 6 }, player.location.description);
     _ = try tui.instance.move_cursor(.{ .x = 2, .y = 8 });
-    _ = try master_writer.print("Exits to the: {s}{s}{s}", .{ Bold(), player.location.exits[0].name, Reset() });
+    _ = try master_writer.print("Exits to the: {s}{s}{s}", .{ tui.Bold(), player.location.exits[0].name, tui.Reset() });
 }
 
 fn start_game(player: Character, world: World) !void {
@@ -60,45 +44,6 @@ fn start_game(player: Character, world: World) !void {
     _ = try printer.print_at_location(.{ .x = 2, .y = 9 }, "# ");
 }
 
-fn makeRaw(tty: posix.fd_t) !posix.termios {
-    const termstate = try posix.tcgetattr(tty);
-    var rawterm = termstate;
-
-    // zig fmt: off
-    // see termios(3) under the section "Raw mode"
-    // iflag is the input mode flags
-    rawterm.iflag.IGNBRK = false; // Don't ignore BREAK
-    rawterm.iflag.BRKINT = false; // BREAK reads as a null byte because IGNBRK and PARMRK are false
-    rawterm.iflag.PARMRK = false; // Do not mark input bytes that have parity or framing errors with \377 and \0 when passed into the program
-    rawterm.iflag.ISTRIP = false; // Don't strip off eighth bit
-    rawterm.iflag.INLCR  = false; // Don't translate newline (NL) to carriage return (CR) on input
-    rawterm.iflag.IGNCR  = false; // Don't ignore carriage return on input
-    rawterm.iflag.ICRNL  = false; // Don't translate newline (NL) to carriage return (CR) on input
-    rawterm.iflag.IXON   = false; // Enable XON/XOFF flow control on output (I think this is set -x)
-
-    // oflag is the output mode flags
-    rawterm.oflag.OPOST = false; // Disable implementation-defined output processing
-
-    // lflag is the local mode flags
-    rawterm.lflag.ECHO   = false; // Echo off. Don't echo input characters
-    rawterm.lflag.ECHONL = false; // Do not echo newlines
-    rawterm.lflag.ICANON = false; // Disable canonical mode
-    rawterm.lflag.ISIG   = false; // Do not generate corresponding signals for INTR, QUIT, SUSP, or DPSUSP characters
-    rawterm.lflag.IEXTEN = false; // Disable implementation-defined input processing like special control characters
-
-    // cflag is the control mode flags
-    rawterm.cflag.CSIZE  = .CS8;  // Character mask size
-    rawterm.cflag.PARENB = false; // Disable parity generation on output and parity checking for input
-    // zig fmt: on
-
-    // special characters
-    rawterm.cc[@intFromEnum(posix.V.MIN)] = 1;
-    rawterm.cc[@intFromEnum(posix.V.TIME)] = 0;
-    try posix.tcsetattr(tty, .NOW, rawterm);
-
-    return termstate;
-}
-
 pub fn main() !void {
     //std.c.setlocale(std.c.LC.CTYPE, "");
 
@@ -106,12 +51,12 @@ pub fn main() !void {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const tty = try posix.open("/dev/tty", .{ .ACCMODE = .RDWR }, 0);
-    const termstate = try makeRaw(tty);
-    defer posix.tcsetattr(tty, .NOW, termstate) catch {};
+    try printer.setup();
+    defer printer.teardown() catch {};
+    // errdefer printer.teardown();
 
-    _ = try master_writer.write(CLEAR_SCREEN);
-    _ = try master_writer.write(HOME_POSITION);
+    _ = try tui.instance.clear_screen();
+    _ = try tui.instance.move_cursor_home();
 
     // const db = try sqlite.Db.init(.{
     //     .mode = sqlite.Db.Mode{ .File = "world.sqlite" },
