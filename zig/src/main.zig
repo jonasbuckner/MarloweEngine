@@ -1,8 +1,8 @@
 // zig fmt: off
-const std     = @import("std");
-const sqlite  = @import("sqlite");
-const tui     = @import("ui/tui.zig").init();
-const printer = @import("ui/print.zig"){ .UIBackend = tui };
+const std    = @import("std");
+const sqlite = @import("sqlite");
+const tui    = @import("ui/tui.zig");
+const print  = @import("ui/print.zig");
 // zig fmt: on
 
 const Item = @import("item.zig").Item;
@@ -100,9 +100,10 @@ fn makeRaw(tty: posix.fd_t) !posix.termios {
 
 pub fn main() !void {
     //std.c.setlocale(std.c.LC.CTYPE, "");
-    std.debug.print("{s}", .{@typeName(@TypeOf(std.io.getStdOut().writer()))});
 
-    try printer.print_at_location(.{ .x = 0, .y = 0 }, "UUUA");
+    const term_ui = tui.Tui{};
+    const printer = print.create_printer(&term_ui);
+    _ = try printer.print_at_location(.{ .x = 0, .y = 0 }, "UUUA");
 
     // var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     // defer arena.deinit();
