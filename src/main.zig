@@ -13,7 +13,6 @@ const Room = @import("room.zig").Room;
 
 const posix = std.posix;
 const printer = print.create_printer(&tui.instance);
-const backend = builder.create_data_layer(&data.instance);
 const master_writer = std.io.getStdOut().writer(); // TODO: remove when possible
 
 const Character = struct {
@@ -61,10 +60,14 @@ pub fn main() !void {
     defer arena.deinit();
     const allocator = arena.allocator();
 
+    var data_instance = data.Data.init(&allocator, 2);
+    const backend = builder.create_data_layer(&data_instance);
+
     const overworld = Map{
         .title = "Overworld",
-        .rooms = try backend.backend.getRooms(allocator),
+        .rooms = try backend.backend.getRooms(),
     };
+    defer backend.backend.deleteRooms() catch {};
     const main_world = World{ .map = overworld };
 
     const player = Character{

@@ -34,6 +34,18 @@ pub fn Printer(comptime Frontend: type) type {
             try self.frontend.move_cursor(location);
             return self.frontend.write(text);
         }
+
+        pub fn format(
+            self: @This(),
+            comptime fmt: []const u8,
+            options: std.fmt.FormatOptions,
+            writer: anytype,
+        ) !void {
+            _ = self;
+            _ = fmt;
+            _ = options;
+            _ = writer;
+        }
     };
 }
 

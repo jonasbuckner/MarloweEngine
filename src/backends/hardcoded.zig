@@ -6,10 +6,20 @@ const Room = @import("../room.zig").Room;
 const ArrayList = std.ArrayList;
 
 pub const Data = struct {
-    var rooms: ArrayList(Room) = undefined;
+    allocator: *const std.mem.Allocator,
+    rooms: ArrayList(Room),
+    rooms_capacity: u16,
 
-    pub fn getRooms(_: *const Data, allocator: std.mem.Allocator) !ArrayList(Room) {
-        rooms = ArrayList(Room).init(allocator);
+    pub fn init(allocator: *const std.mem.Allocator, capacity: ?u16) Data {
+        return .{
+            .allocator = allocator,
+            .rooms = ArrayList(Room).init(allocator.*),
+            .rooms_capacity = capacity orelse 256,
+        };
+    }
+
+    pub fn getRooms(self: *Data) !ArrayList(Room) {
+        _ = try self.rooms.ensureTotalCapacityPrecise(self.rooms_capacity);
 
         const North = Exit.init("north", 1, 0, 0, false);
         const south_room = Room{
@@ -26,16 +36,14 @@ pub const Data = struct {
             .exits = .{South},
         };
 
-        // const rooms: []Room = try allocator.alloc(Room, 2);
-        try rooms.append(room);
-        try rooms.append(south_room);
+        // const self.rooms: []Room = try allocator.alloc(Room, 2);
+        try self.rooms.append(room);
+        try self.rooms.append(south_room);
 
-        return rooms;
+        return self.rooms;
     }
 
-    pub fn deleteRooms(_: *const Data, allocator: std.mem.Allocator) !void {
-        allocator.free(rooms);
+    pub fn deleteRooms(self: *Data) !void {
+        self.rooms.deinit();
     }
 };
-
-pub var instance = Data{};
