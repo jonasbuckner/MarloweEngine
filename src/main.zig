@@ -1,8 +1,10 @@
 // zig fmt: off
-const std    = @import("std");
-const sqlite = @import("sqlite");
-const tui    = @import("ui/tui.zig");
-const print  = @import("ui/print.zig");
+const std     = @import("std");
+const sqlite  = @import("sqlite");
+const tui     = @import("ui/tui.zig");
+const print   = @import("ui/print.zig");
+const builder = @import("backends/backend.zig");
+const data    = @import("backends/hardcoded.zig");
 // zig fmt: on
 
 const Item = @import("item.zig").Item;
@@ -11,6 +13,7 @@ const Room = @import("room.zig").Room;
 
 const posix = std.posix;
 const printer = print.create_printer(&tui.instance);
+const backend = builder.create_data_layer(&data.instance);
 const master_writer = std.io.getStdOut().writer(); // TODO: remove when possible
 
 const Character = struct {
@@ -21,7 +24,7 @@ const Character = struct {
 
 const Map = struct {
     title: []const u8,
-    rooms: []Room,
+    rooms: std.ArrayList(Room),
 };
 
 const World = struct {
@@ -47,10 +50,6 @@ fn start_game(player: Character, world: World) !void {
 pub fn main() !void {
     //std.c.setlocale(std.c.LC.CTYPE, "");
 
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
     try printer.setup();
     defer printer.teardown() catch {};
     // errdefer printer.teardown();
@@ -58,40 +57,13 @@ pub fn main() !void {
     _ = try tui.instance.clear_screen();
     _ = try tui.instance.move_cursor_home();
 
-    // const db = try sqlite.Db.init(.{
-    //     .mode = sqlite.Db.Mode{ .File = "world.sqlite" },
-    //     .open_flags = .{
-    //         .write = true,
-    //         .create = true,
-    //     },
-    //     .threading_mode = .Multithread,
-    // });
-
-    // const room_statement = db.prepare("SELECT * FROM room;");
-    // defer room_statement.deinit();
-
-    const North = Exit.init("north", 1, 0, 0, false);
-    const south_room = Room{
-        .title = "Die",
-        .description = "You die.",
-        .items = undefined,
-        .exits = .{North},
-    };
-    const South = Exit.init("south", -1, 0, 0, false);
-    const room = Room{
-        .title = "Born",
-        .description = "You are born.",
-        .items = .{Item{ .name = "Raygun", .description = "Pew pew" }},
-        .exits = .{South},
-    };
-
-    const rooms: []Room = try allocator.alloc(Room, 2);
-    rooms[0] = room;
-    rooms[1] = south_room;
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
 
     const overworld = Map{
         .title = "Overworld",
-        .rooms = rooms,
+        .rooms = try backend.backend.getRooms(allocator),
     };
     const main_world = World{ .map = overworld };
 
@@ -100,7 +72,7 @@ pub fn main() !void {
             Item{ .name = "Raygun", .description = "Raygun pew pew" },
         },
         .description = "",
-        .location = room,
+        .location = overworld.rooms.getLast(),
     };
 
     while (true) {
