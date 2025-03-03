@@ -19,7 +19,7 @@ const master_writer = std.io.getStdOut().writer(); // TODO: remove when possible
 const Character = struct {
     inventory: [1]Item,
     description: []u8,
-    location: Room,
+    location: *Room,
 };
 
 const Map = struct {
@@ -72,7 +72,7 @@ pub fn main() !void {
             Item{ .name = "Raygun", .description = "Raygun pew pew" },
         },
         .description = "",
-        .location = overworld.rooms.getLast(),
+        .location = &overworld.rooms.items[0],
     };
 
     while (true) {
