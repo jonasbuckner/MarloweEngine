@@ -13,7 +13,6 @@ const Room = @import("room.zig").Room;
 
 const posix = std.posix;
 const printer = print.create_printer(&tui.instance);
-const master_writer = std.io.getStdOut().writer(); // TODO: remove when possible
 
 const Character = struct {
     inventory: [1]Item,
@@ -34,14 +33,14 @@ fn print_current_room(player: Character) !void {
     _ = try printer.write(player.location.title);
 
     _ = try printer.print_at_location(.{ .x = 2, .y = 6 }, player.location.description);
-    _ = try tui.instance.move_cursor(.{ .x = 2, .y = 8 });
-    _ = try master_writer.print("Exits to the: {s}{s}{s}", .{ tui.Bold(), player.location.exits[0].name, tui.Reset() });
+    _ = try printer.move_cursor(.{ .x = 2, .y = 8 });
+    _ = try printer.print("Exits to the: {s}{s}{s}", .{ tui.Bold(), player.location.exits[0].name, tui.Reset() });
 }
 
 fn start_game(player: Character, world: World) !void {
     _ = try printer.print_at_location(.{ .x = 0, .y = 0 }, "MARLOWE");
     _ = try printer.print_at_location(.{ .x = 2, .y = 2 }, world.map.title);
-    _ = try tui.instance.move_cursor(.{ .x = 2, .y = 4 });
+    _ = try printer.move_cursor(.{ .x = 2, .y = 4 });
     _ = try print_current_room(player);
     _ = try printer.print_at_location(.{ .x = 2, .y = 9 }, "# ");
 }
@@ -52,9 +51,6 @@ pub fn main() !void {
     try printer.setup();
     defer printer.teardown() catch {};
     // errdefer printer.teardown();
-
-    _ = try tui.instance.clear_screen();
-    _ = try tui.instance.move_cursor_home();
 
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();

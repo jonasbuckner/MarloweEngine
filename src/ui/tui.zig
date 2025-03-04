@@ -27,6 +27,14 @@ pub const Tui = struct {
         _ = try self.write(HOME_POSITION);
     }
 
+    pub fn print(_: *const Tui, comptime fmt: []const u8, args: anytype) anyerror!void {
+        return std.fmt.format(stdout.writer(), fmt, args);
+    }
+
+    // pub fn format(self: @This(), comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+    //     return std.fmt.format(stdout.writer(), fmt, args);
+    // }
+
     pub fn setup(self: *const Tui) !void {
         tty = posix.open("/dev/tty", .{ .ACCMODE = .RDWR }, 0) catch 0;
         if (tty == 0) {
@@ -37,6 +45,9 @@ pub const Tui = struct {
             return;
         }
         try self.makeRaw();
+
+        _ = try self.clear_screen();
+        _ = try self.move_cursor_home();
     }
 
     pub fn teardown(_: *const Tui) !void {

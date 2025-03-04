@@ -35,6 +35,14 @@ pub fn Printer(comptime Frontend: type) type {
             return self.frontend.write(text);
         }
 
+        pub fn print(self: Self, comptime fmt: []const u8, args: anytype) anyerror!void {
+            return self.frontend.print(fmt, args);
+        }
+
+        pub fn move_cursor(self: Self, location: Location) !void {
+            try self.frontend.move_cursor(location);
+        }
+
         pub fn format(
             self: @This(),
             comptime fmt: []const u8,
