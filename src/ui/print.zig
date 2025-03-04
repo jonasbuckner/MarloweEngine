@@ -29,6 +29,10 @@ pub fn Printer(comptime Frontend: type) type {
             return self.frontend.write(text);
         }
 
+        pub fn writeByte(self: Self, byte: u8) !usize {
+            return self.frontend.writeByte(byte);
+        }
+
         // Forward print_at_location calls to the frontend
         pub fn print_at_location(self: Self, location: Location, text: []const u8) !usize {
             try self.frontend.move_cursor(location);

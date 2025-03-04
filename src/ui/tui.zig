@@ -15,6 +15,11 @@ pub const Tui = struct {
         return stdout.write(bytes);
     }
 
+    pub fn writeByte(_: *const Tui, byte: u8) !usize {
+        const byte_array: [1]u8 = .{byte};
+        return stdout.write(@as([]const u8, &byte_array));
+    }
+
     pub fn move_cursor(_: *const Tui, location: Location) !void {
         try stdout.writer().print(MOVE_CURSOR_FMT, .{ location.y, location.x });
     }
@@ -52,6 +57,7 @@ pub const Tui = struct {
 
     pub fn teardown(_: *const Tui) !void {
         posix.tcsetattr(tty, .NOW, saved_terminal_state) catch {};
+        posix.close(tty);
     }
 
     fn makeRaw(_: *const Tui) !void {
