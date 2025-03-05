@@ -1,5 +1,7 @@
 const std = @import("std");
-const Location = @import("location.zig").Location;
+const screen = @import("screen.zig");
+const Location = screen.Location;
+const Direction = screen.Direction;
 
 // Generic printer that works with any frontend type
 pub fn Printer(comptime Frontend: type) type {
@@ -45,6 +47,38 @@ pub fn Printer(comptime Frontend: type) type {
 
         pub fn move_cursor(self: Self, location: Location) !void {
             try self.frontend.move_cursor(location);
+        }
+
+        pub fn save_cursor(self: Self) !void {
+            try self.frontend.save_cursor();
+        }
+
+        pub fn restore_cursor(self: Self) !void {
+            try self.frontend.restore_cursor();
+        }
+
+        pub fn move_cursor_direction(self: Self, comptime direction: Direction, count: u16) !void {
+            try self.frontend.move_cursor_direction(direction, count);
+        }
+
+        pub fn move_cursor_up(self: Self, count: ?u16) !void {
+            try self.frontend.move_cursor_direction(Direction.up, count orelse 1);
+        }
+
+        pub fn move_cursor_down(self: Self, count: ?u16) !void {
+            try self.frontend.move_cursor_direction(Direction.down, count orelse 1);
+        }
+
+        pub fn move_cursor_left(self: Self, count: ?u16) !void {
+            try self.frontend.move_cursor_direction(Direction.left, count orelse 1);
+        }
+
+        pub fn move_cursor_right(self: Self, count: ?u16) !void {
+            try self.frontend.move_cursor_direction(Direction.right, count orelse 1);
+        }
+
+        pub fn move_cursor_newline(self: Self) !void {
+            try self.frontend.move_cursor_newline();
         }
 
         pub fn format(

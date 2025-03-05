@@ -1,10 +1,21 @@
 const std = @import("std");
-const Location = @import("location.zig").Location;
+const screen = @import("screen.zig");
+const Location = screen.Location;
+const Direction = screen.Direction;
 const posix = std.posix;
 
-const CLEAR_SCREEN = "\x1b[2J";
-const HOME_POSITION = "\x1b[1H";
-const MOVE_CURSOR_FMT = "\x1b[{d};{d}H";
+// zig fmt: off
+const CLEAR_SCREEN      = "\x1b[2J";
+const HOME_POSITION     = "\x1b[1H";
+const SAVE_CURSOR       = "\x1b7";
+const RESTORE_CURSOR    = "\x1b8";
+const MOVE_CURSOR_FMT   = "\x1b[{d};{d}H";
+const MOVE_CURSOR_UP    = "\x1b[{d}A";
+const MOVE_CURSOR_DOWN  = "\x1b[{d}B";
+const MOVE_CURSOR_RIGHT = "\x1b[{d}C";
+const MOVE_CURSOR_LEFT  = "\x1b[{d}D";
+const MOVE_CURSOR_LFCR  = "\x1b[1E";
+// zig fmt: on
 
 pub const Tui = struct {
     const stdout = std.io.getStdOut();
@@ -24,12 +35,35 @@ pub const Tui = struct {
         try stdout.writer().print(MOVE_CURSOR_FMT, .{ location.y, location.x });
     }
 
+    pub fn save_cursor(_: *const Tui) !void {
+        _ = try stdout.write(SAVE_CURSOR);
+    }
+
+    pub fn restore_cursor(_: *const Tui) !void {
+        _ = try stdout.write(RESTORE_CURSOR);
+    }
+
+    pub fn move_cursor_direction(_: *const Tui, comptime direction: Direction, count: u16) !void {
+        const fmt = comptime switch (direction) {
+            .up => MOVE_CURSOR_UP,
+            .down => MOVE_CURSOR_DOWN,
+            .left => MOVE_CURSOR_LEFT,
+            .right => MOVE_CURSOR_RIGHT,
+        };
+
+        _ = try stdout.writer().print(fmt, .{count});
+    }
+
     pub fn clear_screen(self: *const Tui) !void {
         _ = try self.write(CLEAR_SCREEN);
     }
 
     pub fn move_cursor_home(self: *const Tui) !void {
         _ = try self.write(HOME_POSITION);
+    }
+
+    pub fn move_cursor_newline(self: *const Tui) !void {
+        _ = try self.write(MOVE_CURSOR_LFCR);
     }
 
     pub fn print(_: *const Tui, comptime fmt: []const u8, args: anytype) anyerror!void {

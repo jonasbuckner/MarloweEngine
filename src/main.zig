@@ -3,8 +3,10 @@ const std     = @import("std");
 const sqlite  = @import("sqlite");
 const tui     = @import("ui/tui.zig");
 const print   = @import("ui/print.zig");
+const Screen  = @import("ui/screen.zig");
 const builder = @import("backends/backend.zig");
 const data    = @import("backends/hardcoded.zig");
+const CommandProcessor = @import("command_processor.zig").CommandProcessor;
 // zig fmt: on
 
 const Item = @import("item.zig").Item;
@@ -74,45 +76,49 @@ pub fn main() !void {
         .location = &overworld.rooms.items[0],
     };
 
-    const commands = enum { quit, north, south, nomatch };
+    const commands = CommandProcessor.commands;
 
     main_loop: while (true) {
         try start_game(player, main_world);
 
-        var command_buffer = std.mem.zeroes([10]u8);
+        var command_buffer = std.mem.zeroes([255]u8);
         var processed_buffer: []const u8 = undefined;
 
         var i: u8 = 0;
-        while (command_buffer[i] != '\n') : (i += 1) {
-            // _ = try printer.print("{d}", .{i});
+        while (command_buffer[i] != '\n') {
             const x = try std.io.getStdIn().reader().readByte();
             command_buffer[i] = x;
-            // _ = try printer.print_at_location(.{ .x = 30, .y = 9 }, @as([]const u8, &command_buffer));
-            // _ = try printer.move_cursor(.{ .x = i + 5, .y = 9 });
 
             if (command_buffer[i] == '\x1b') {
+                _ = try printer.move_cursor_down(1);
+                _ = try printer.move_cursor_newline();
                 break :main_loop;
+            } else if (command_buffer[i] == std.ascii.control_code.del) {
+                if (i > 0) {
+                    command_buffer[i] = 0;
+                    try printer.move_cursor_left(1);
+                    _ = try printer.writeByte(' ');
+                    try printer.move_cursor_left(1);
+                    i = i - 1;
+                }
             } else if (command_buffer[i] == '\n' or command_buffer[i] == '\r') {
-                // _ = try printer.print_at_location(.{ .x = 30, .y = 8 }, "newline");
-                // _ = try printer.move_cursor(.{ .x = i + 5, .y = 9 });
-                command_buffer[i] = 0;
+                for (command_buffer, 0..) |c, j| {
+                    command_buffer[j] = std.ascii.toLower(c);
+                }
                 processed_buffer = command_buffer[0..i];
-                // _ = try printer.print_at_location(.{ .x = 30, .y = 7 }, processed_buffer);
                 break;
             } else {
                 _ = try printer.writeByte(command_buffer[i]);
-                // _ = try printer.print("{d}", .{i});
+                i += 1;
             }
         }
 
-        // _ = try printer.print_at_location(.{ .x = 30, .y = 7 }, processed_buffer);
         const read_command = std.meta.stringToEnum(commands, processed_buffer) orelse .nomatch;
-        // _ = try printer.move_cursor(.{ .x = 50, .y = 10 });
-        // _ = try printer.print("{d}", .{@intFromEnum(read_command)});
-        // _ = try printer.move_cursor(.{ .x = 4, .y = 11 });
 
         switch (read_command) {
             .quit => {
+                _ = try printer.move_cursor_down(1);
+                _ = try printer.move_cursor_newline();
                 break;
             },
             .north => {
