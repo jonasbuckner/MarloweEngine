@@ -77,11 +77,11 @@ pub fn main() !void {
     };
 
     const commands = CommandProcessor.commands;
+    const BUFFER_LENGTH = 255;
 
     main_loop: while (true) {
         try start_game(player, main_world);
-
-        var command_buffer = std.mem.zeroes([255]u8);
+        var command_buffer = std.mem.zeroes([BUFFER_LENGTH]u8);
         var processed_buffer: []const u8 = undefined;
 
         var i: u8 = 0;
@@ -102,12 +102,16 @@ pub fn main() !void {
                     i = i - 1;
                 }
             } else if (command_buffer[i] == '\n' or command_buffer[i] == '\r') {
+                _ = try printer.save_cursor();
                 for (command_buffer, 0..) |c, j| {
                     command_buffer[j] = std.ascii.toLower(c);
                 }
                 processed_buffer = command_buffer[0..i];
                 break;
             } else {
+                if (i >= BUFFER_LENGTH) {
+                    continue;
+                }
                 _ = try printer.writeByte(command_buffer[i]);
                 i += 1;
             }
@@ -123,12 +127,25 @@ pub fn main() !void {
             },
             .north => {
                 player.location = &overworld.rooms.items[0];
+                const prompt_start = Screen.Location{ .x = 9, .y = 4 };
+                const clear_buffer = " " ** BUFFER_LENGTH;
+                _ = try printer.print_at_location(prompt_start, clear_buffer);
+                _ = try printer.move_cursor(prompt_start);
             },
             .south => {
                 player.location = &overworld.rooms.items[1];
+                const prompt_start = Screen.Location{ .x = 9, .y = 4 };
+                const clear_buffer = " " ** BUFFER_LENGTH;
+                _ = try printer.print_at_location(prompt_start, clear_buffer);
+                _ = try printer.move_cursor(prompt_start);
             },
             else => {
+                // _ = try printer.save_cursor();
+                _ = try printer.move_cursor_down(1);
+                _ = try printer.move_cursor_newline();
                 _ = try printer.write("Command not found");
+                _ = try printer.restore_cursor();
+                // @memset(&command_buffer, 0);
             },
         }
         std.posix.nanosleep(0, 16000);
