@@ -75,6 +75,9 @@ pub const Tui = struct {
         return stdin.reader().readByte();
     }
 
+    pub fn read(_: *const Tui, buffer: []u8) anyerror!usize {
+        return stdin.reader().read(buffer);
+    }
     // pub fn format(self: @This(), comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
     //     return std.fmt.format(stdout.writer(), fmt, args);
     // }

@@ -113,13 +113,32 @@ pub fn main() !void {
 
         var i: usize = cursor_start;
         while (command_buffer[i] != '\n') {
-            const x = try printer.readByte();
-            command_buffer[i] = x;
+            var read_buffer = std.mem.zeroes([BUFFER_LENGTH]u8);
+            const command_length = try printer.read(&read_buffer);
+            for (0..command_length) |j| {
+                command_buffer[i + j] = read_buffer[j];
+            }
 
             if (command_buffer[i] == '\x1b') {
-                _ = try printer.move_cursor_down(1);
-                _ = try printer.move_cursor_newline();
-                break :main_loop;
+                if (command_buffer[i + 1] == 0) {
+                    _ = try printer.move_cursor_down(1);
+                    _ = try printer.move_cursor_newline();
+                    break :main_loop;
+                } else if (command_buffer[i + 1] == '[') {
+                    switch (command_buffer[i + 2]) {
+                        'D' => {
+                            try printer.move_cursor_left(1);
+                        },
+                        'C' => {
+                            try printer.move_cursor_right(1);
+                        },
+                        else => {},
+                    }
+
+                    command_buffer[i] = 0;
+                    command_buffer[i + 1] = 0;
+                    command_buffer[i + 2] = 0;
+                }
             } else if (command_buffer[i] == std.ascii.control_code.del) {
                 if (i > 0) {
                     command_buffer[i] = 0;

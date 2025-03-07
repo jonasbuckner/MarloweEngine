@@ -92,6 +92,10 @@ pub fn Printer(comptime Frontend: type) type {
             return self.frontend.readByte();
         }
 
+        pub fn read(self: Self, buffer: []u8) anyerror!usize {
+            return self.frontend.read(buffer);
+        }
+
         pub fn format(
             self: @This(),
             comptime fmt: []const u8,
