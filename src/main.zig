@@ -46,6 +46,9 @@ fn print_current_room(player: Character) !void {
     _ = try printer.write("Exits to the: ");
 
     for (player.location.exits) |e| {
+        if (e.direction == CommandProcessor.commands.nomatch) {
+            continue;
+        }
         _ = try printer.write(tui.Bold());
         _ = try printer.write(@tagName(e.direction));
         _ = try printer.write(tui.Reset());

@@ -35,17 +35,29 @@ pub const Data = struct {
             .items = .{Item{ .name = "Raygun", .description = "Pew pew" }},
             .exits = undefined,
         };
+        const west_room = Room{
+            .title = "Married",
+            .description = "You got Married.",
+            .items = undefined,
+            .exits = undefined,
+        };
 
         try self.rooms.append(north_room);
         try self.rooms.append(south_room);
+        try self.rooms.append(west_room);
 
         var North = Exit.init(CommandProcessor.commands.north, 0, 1, 0, false);
         North.room = &self.rooms.items[0];
         var South = Exit.init(CommandProcessor.commands.south, 0, -1, 0, false);
         South.room = &self.rooms.items[1];
+        var West = Exit.init(CommandProcessor.commands.west, 0, 1, 0, false);
+        West.room = &self.rooms.items[2];
+        var East = Exit.init(CommandProcessor.commands.east, 0, 1, 0, false);
+        East.room = &self.rooms.items[0];
 
-        self.rooms.items[0].exits = .{South};
-        self.rooms.items[1].exits = .{North};
+        self.rooms.items[0].exits = .{ South, West };
+        self.rooms.items[1].exits = .{ North, Exit.empty() };
+        self.rooms.items[2].exits = .{ East, Exit.empty() };
 
         return self.rooms;
     }

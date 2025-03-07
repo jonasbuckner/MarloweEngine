@@ -25,10 +25,12 @@ pub const Exit = struct {
 
     pub fn empty() Exit {
         return Exit{
+            .direction = CommandProcessor.commands.nomatch,
             .x = 0,
             .y = 0,
             .z = 0,
             .hidden = false,
+            .room = undefined,
         };
     }
 };
