@@ -96,12 +96,22 @@ pub fn main() !void {
     const commands = CommandProcessor.commands;
     const BUFFER_LENGTH = 255;
 
+    var mark_dirty = false;
+    var command_buffer = std.mem.zeroes([BUFFER_LENGTH]u8);
+    var processed_buffer: []const u8 = undefined;
+
     main_loop: while (true) {
         try start_game(player, main_world);
-        var command_buffer = std.mem.zeroes([BUFFER_LENGTH]u8);
-        var processed_buffer: []const u8 = undefined;
 
-        var i: u8 = 0;
+        var cursor_start: usize = 0;
+        if (!mark_dirty) {
+            command_buffer = std.mem.zeroes([BUFFER_LENGTH]u8);
+            try printer.clear_to_end_of_current_line();
+        } else {
+            cursor_start = try printer.write(processed_buffer);
+        }
+
+        var i: usize = cursor_start;
         while (command_buffer[i] != '\n') {
             const x = try printer.readByte();
             command_buffer[i] = x;
@@ -152,6 +162,7 @@ pub fn main() !void {
                         _ = try printer.move_cursor_down(1);
                         _ = try printer.move_cursor_newline();
                         try printer.clear_to_end_of_current_line();
+                        mark_dirty = false;
                         break;
                     }
                 } else {
@@ -159,15 +170,18 @@ pub fn main() !void {
                     _ = try printer.move_cursor_newline();
                     _ = try printer.write("No Exit in that direction");
                     _ = try printer.restore_cursor();
+                    mark_dirty = true;
                 }
             },
             else => {
                 // _ = try printer.save_cursor();
+                command_buffer[i] = 0;
                 _ = try printer.move_cursor_down(1);
                 _ = try printer.move_cursor_newline();
                 _ = try printer.write("Command not found");
                 _ = try printer.restore_cursor();
                 // @memset(&command_buffer, 0);
+                mark_dirty = true;
             },
         }
         std.posix.nanosleep(0, 16000);
