@@ -100,7 +100,7 @@ pub fn main() !void {
 
         var i: u8 = 0;
         while (command_buffer[i] != '\n') {
-            const x = try std.io.getStdIn().reader().readByte();
+            const x = try printer.readByte();
             command_buffer[i] = x;
 
             if (command_buffer[i] == '\x1b') {
@@ -143,6 +143,7 @@ pub fn main() !void {
                 for (player.location.exits) |e| {
                     if (e.direction == read_command) {
                         player.location = @constCast(e.room);
+
                         try printer.move_cursor_left(i);
                         try printer.clear_to_end_of_current_line();
                         _ = try printer.move_cursor_down(1);

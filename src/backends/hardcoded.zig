@@ -22,6 +22,7 @@ pub const Data = struct {
     pub fn getRooms(self: *Data) !ArrayList(Room) {
         _ = try self.rooms.ensureTotalCapacityPrecise(self.rooms_capacity);
 
+        // TODO: Maybe we rid ourselves of circular dependencies
         const south_room = Room{
             .title = "Die",
             .description = "You die.",

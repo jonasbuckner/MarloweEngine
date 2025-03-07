@@ -19,6 +19,7 @@ const MOVE_CURSOR_LFCR  = "\x1b[1E";
 
 pub const Tui = struct {
     const stdout = std.io.getStdOut();
+    const stdin = std.io.getStdIn();
     var saved_terminal_state: posix.termios = undefined;
     var tty: posix.fd_t = undefined;
 
@@ -68,6 +69,10 @@ pub const Tui = struct {
 
     pub fn print(_: *const Tui, comptime fmt: []const u8, args: anytype) anyerror!void {
         return std.fmt.format(stdout.writer(), fmt, args);
+    }
+
+    pub fn readByte(_: *const Tui) anyerror!u8 {
+        return stdin.reader().readByte();
     }
 
     // pub fn format(self: @This(), comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {

@@ -1,4 +1,5 @@
 const std = @import("std");
+
 const screen = @import("screen.zig");
 const Location = screen.Location;
 const Direction = screen.Direction;
@@ -24,12 +25,6 @@ pub fn Printer(comptime Frontend: type) type {
 
         pub fn teardown(self: Self) !void {
             try self.frontend.teardown();
-        }
-
-        pub fn clear_to_end_of_current_line(self: Self) !void {
-            _ = try self.save_cursor();
-            _ = try self.write(" " ** 50);
-            _ = try self.restore_cursor();
         }
 
         // Forward write calls to the frontend
@@ -85,6 +80,16 @@ pub fn Printer(comptime Frontend: type) type {
 
         pub fn move_cursor_newline(self: Self) !void {
             try self.frontend.move_cursor_newline();
+        }
+
+        pub fn clear_to_end_of_current_line(self: Self) !void {
+            _ = try self.save_cursor();
+            _ = try self.write(" " ** 50);
+            _ = try self.restore_cursor();
+        }
+
+        pub fn readByte(self: Self) anyerror!u8 {
+            return self.frontend.readByte();
         }
 
         pub fn format(
