@@ -43,7 +43,7 @@ pub const Tui = struct {
         _ = try stdout.write(RESTORE_CURSOR);
     }
 
-    pub fn move_cursor_direction(_: *const Tui, comptime direction: Direction, count: u16) !void {
+    pub fn move_cursor_direction(_: *const Tui, comptime direction: Direction, count: usize) !void {
         const fmt = comptime switch (direction) {
             .up => MOVE_CURSOR_UP,
             .down => MOVE_CURSOR_DOWN,

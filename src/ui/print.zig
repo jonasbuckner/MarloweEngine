@@ -26,6 +26,12 @@ pub fn Printer(comptime Frontend: type) type {
             try self.frontend.teardown();
         }
 
+        pub fn clear_to_end_of_current_line(self: Self) !void {
+            _ = try self.save_cursor();
+            _ = try self.write(" " ** 50);
+            _ = try self.restore_cursor();
+        }
+
         // Forward write calls to the frontend
         pub fn write(self: Self, text: []const u8) !usize {
             return self.frontend.write(text);
@@ -61,20 +67,20 @@ pub fn Printer(comptime Frontend: type) type {
             try self.frontend.move_cursor_direction(direction, count);
         }
 
-        pub fn move_cursor_up(self: Self, count: ?u16) !void {
-            try self.frontend.move_cursor_direction(Direction.up, count orelse 1);
+        pub fn move_cursor_up(self: Self, count: usize) !void {
+            try self.frontend.move_cursor_direction(Direction.up, count);
         }
 
-        pub fn move_cursor_down(self: Self, count: ?u16) !void {
-            try self.frontend.move_cursor_direction(Direction.down, count orelse 1);
+        pub fn move_cursor_down(self: Self, count: usize) !void {
+            try self.frontend.move_cursor_direction(Direction.down, count);
         }
 
-        pub fn move_cursor_left(self: Self, count: ?u16) !void {
-            try self.frontend.move_cursor_direction(Direction.left, count orelse 1);
+        pub fn move_cursor_left(self: Self, count: usize) !void {
+            try self.frontend.move_cursor_direction(Direction.left, count);
         }
 
-        pub fn move_cursor_right(self: Self, count: ?u16) !void {
-            try self.frontend.move_cursor_direction(Direction.right, count orelse 1);
+        pub fn move_cursor_right(self: Self, count: usize) !void {
+            try self.frontend.move_cursor_direction(Direction.right, count);
         }
 
         pub fn move_cursor_newline(self: Self) !void {

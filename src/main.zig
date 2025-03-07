@@ -32,15 +32,29 @@ const World = struct {
 };
 
 fn print_current_room(player: Character) !void {
-    _ = try printer.write(player.location.title);
+    try printer.clear_to_end_of_current_line();
+    var last_len = try printer.write(player.location.*.title);
 
-    _ = try printer.print_at_location(.{ .x = 2, .y = 6 }, player.location.description);
-    _ = try printer.move_cursor(.{ .x = 2, .y = 8 });
-    _ = try printer.print("Exits to the: {s}{s}{s}", .{ tui.Bold(), player.location.exits[0].name, tui.Reset() });
+    try printer.move_cursor_down(2);
+    try printer.move_cursor_left(last_len);
+    try printer.clear_to_end_of_current_line();
+    last_len = try printer.write(player.location.*.description);
+
+    try printer.move_cursor_down(2);
+    try printer.move_cursor_left(last_len);
+    try printer.clear_to_end_of_current_line();
+    _ = try printer.write("Exits to the: ");
+
+    for (player.location.exits) |e| {
+        _ = try printer.write(tui.Bold());
+        _ = try printer.write(@tagName(e.direction));
+        _ = try printer.write(tui.Reset());
+        _ = try printer.writeByte(' ');
+    }
 }
 
 fn start_game(player: Character, world: World) !void {
-    _ = try printer.print_at_location(.{ .x = 0, .y = 0 }, "MARLOWE");
+    _ = try printer.print_at_location(.{ .x = 1, .y = 1 }, "MARLOWE");
     _ = try printer.print_at_location(.{ .x = 2, .y = 2 }, world.map.title);
     _ = try printer.move_cursor(.{ .x = 2, .y = 4 });
     _ = try print_current_room(player);
@@ -125,19 +139,23 @@ pub fn main() !void {
                 _ = try printer.move_cursor_newline();
                 break;
             },
-            .north => {
-                player.location = &overworld.rooms.items[0];
-                const prompt_start = Screen.Location{ .x = 9, .y = 4 };
-                const clear_buffer = " " ** BUFFER_LENGTH;
-                _ = try printer.print_at_location(prompt_start, clear_buffer);
-                _ = try printer.move_cursor(prompt_start);
-            },
-            .south => {
-                player.location = &overworld.rooms.items[1];
-                const prompt_start = Screen.Location{ .x = 9, .y = 4 };
-                const clear_buffer = " " ** BUFFER_LENGTH;
-                _ = try printer.print_at_location(prompt_start, clear_buffer);
-                _ = try printer.move_cursor(prompt_start);
+            .north, .south, .east, .west, .in, .out => {
+                for (player.location.exits) |e| {
+                    if (e.direction == read_command) {
+                        player.location = @constCast(e.room);
+                        try printer.move_cursor_left(i);
+                        try printer.clear_to_end_of_current_line();
+                        _ = try printer.move_cursor_down(1);
+                        _ = try printer.move_cursor_newline();
+                        try printer.clear_to_end_of_current_line();
+                        break;
+                    }
+                } else {
+                    _ = try printer.move_cursor_down(1);
+                    _ = try printer.move_cursor_newline();
+                    _ = try printer.write("No Exit in that direction");
+                    _ = try printer.restore_cursor();
+                }
             },
             else => {
                 // _ = try printer.save_cursor();

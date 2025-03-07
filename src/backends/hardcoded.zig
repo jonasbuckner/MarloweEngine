@@ -1,4 +1,5 @@
 const std = @import("std");
+const CommandProcessor = @import("../command_processor.zig").CommandProcessor;
 const Item = @import("../item.zig").Item;
 const Exit = @import("../exit.zig").Exit;
 const Room = @import("../room.zig").Room;
@@ -21,24 +22,29 @@ pub const Data = struct {
     pub fn getRooms(self: *Data) !ArrayList(Room) {
         _ = try self.rooms.ensureTotalCapacityPrecise(self.rooms_capacity);
 
-        const North = Exit.init("north", 1, 0, 0, false);
         const south_room = Room{
             .title = "Die",
             .description = "You die.",
             .items = undefined,
-            .exits = .{North},
+            .exits = undefined,
         };
-        const South = Exit.init("south", -1, 0, 0, false);
-        const room = Room{
+        const north_room = Room{
             .title = "Born",
             .description = "You are born.",
             .items = .{Item{ .name = "Raygun", .description = "Pew pew" }},
-            .exits = .{South},
+            .exits = undefined,
         };
 
-        // const self.rooms: []Room = try allocator.alloc(Room, 2);
-        try self.rooms.append(room);
+        try self.rooms.append(north_room);
         try self.rooms.append(south_room);
+
+        var North = Exit.init(CommandProcessor.commands.north, 0, 1, 0, false);
+        North.room = &self.rooms.items[0];
+        var South = Exit.init(CommandProcessor.commands.south, 0, -1, 0, false);
+        South.room = &self.rooms.items[1];
+
+        self.rooms.items[0].exits = .{South};
+        self.rooms.items[1].exits = .{North};
 
         return self.rooms;
     }
