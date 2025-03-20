@@ -4,6 +4,8 @@ const screen = @import("screen.zig");
 const Location = screen.Location;
 const Direction = screen.Direction;
 
+pub const PrinterFace = @import("printer_face.zig");
+
 // Generic printer that works with any frontend type
 pub fn Printer(comptime Frontend: type) type {
     return struct {
@@ -27,18 +29,26 @@ pub fn Printer(comptime Frontend: type) type {
             try self.frontend.teardown();
         }
 
+        pub fn TabStop(_: Self) usize {
+            return Frontend.TabStop();
+        }
+
         // Forward write calls to the frontend
         pub fn write(self: Self, text: []const u8) !usize {
             return self.frontend.write(text);
+        }
+
+        pub fn writeErr(self: Self, text: []const u8) !usize {
+            return self.frontend.writeErr(text);
         }
 
         pub fn writeByte(self: Self, byte: u8) !usize {
             return self.frontend.writeByte(byte);
         }
 
-        // Forward print_at_location calls to the frontend
-        pub fn print_at_location(self: Self, location: Location, text: []const u8) !usize {
-            try self.frontend.move_cursor(location);
+        // Forward printAtLocation calls to the frontend
+        pub fn printAtLocation(self: Self, location: Location, text: []const u8) !usize {
+            try self.frontend.moveCursor(location);
             return self.frontend.write(text);
         }
 
@@ -46,46 +56,44 @@ pub fn Printer(comptime Frontend: type) type {
             return self.frontend.print(fmt, args);
         }
 
-        pub fn move_cursor(self: Self, location: Location) !void {
-            try self.frontend.move_cursor(location);
+        pub fn moveCursor(self: Self, location: Location) !void {
+            try self.frontend.moveCursor(location);
         }
 
-        pub fn save_cursor(self: Self) !void {
-            try self.frontend.save_cursor();
+        pub fn saveCursor(self: Self) !void {
+            try self.frontend.saveCursor();
         }
 
-        pub fn restore_cursor(self: Self) !void {
-            try self.frontend.restore_cursor();
+        pub fn restoreCursor(self: Self) !void {
+            try self.frontend.restoreCursor();
         }
 
-        pub fn move_cursor_direction(self: Self, comptime direction: Direction, count: u16) !void {
-            try self.frontend.move_cursor_direction(direction, count);
+        pub fn cursorPosition(self: Self) !Location {
+            return self.frontend.cursorPosition();
         }
 
-        pub fn move_cursor_up(self: Self, count: usize) !void {
-            try self.frontend.move_cursor_direction(Direction.up, count);
+        pub fn moveCursorDirection(self: Self, comptime direction: Direction, count: usize) !void {
+            try self.frontend.moveCursorDirection(direction, count);
         }
 
-        pub fn move_cursor_down(self: Self, count: usize) !void {
-            try self.frontend.move_cursor_direction(Direction.down, count);
+        pub fn moveCursorUp(self: Self, count: usize) !void {
+            try self.frontend.moveCursorDirection(Direction.up, count);
         }
 
-        pub fn move_cursor_left(self: Self, count: usize) !void {
-            try self.frontend.move_cursor_direction(Direction.left, count);
+        pub fn moveCursorDown(self: Self, count: usize) !void {
+            try self.frontend.moveCursorDirection(Direction.down, count);
         }
 
-        pub fn move_cursor_right(self: Self, count: usize) !void {
-            try self.frontend.move_cursor_direction(Direction.right, count);
+        pub fn moveCursorLeft(self: Self, count: usize) !void {
+            try self.frontend.moveCursorDirection(Direction.left, count);
         }
 
-        pub fn move_cursor_newline(self: Self) !void {
-            try self.frontend.move_cursor_newline();
+        pub fn moveCursorRight(self: Self, count: usize) !void {
+            try self.frontend.moveCursorDirection(Direction.right, count);
         }
 
-        pub fn clear_to_end_of_current_line(self: Self) !void {
-            _ = try self.save_cursor();
-            _ = try self.write(" " ** 50);
-            _ = try self.restore_cursor();
+        pub fn moveCursorNewline(self: Self) !void {
+            try self.frontend.moveCursorNewline();
         }
 
         pub fn readByte(self: Self) anyerror!u8 {
@@ -94,6 +102,22 @@ pub fn Printer(comptime Frontend: type) type {
 
         pub fn read(self: Self, buffer: []u8) anyerror!usize {
             return self.frontend.read(buffer);
+        }
+
+        pub fn eraseCharacterUnderCursor(self: Self) !void {
+            return self.frontend.eraseCharacterUnderCursor();
+        }
+
+        pub fn eraseToEndOfCurrentLine(self: Self) !usize {
+            return self.frontend.eraseToEndOfCurrentLine();
+        }
+
+        pub fn eraseToStartOfCurrentLine(self: Self) !usize {
+            return self.frontend.eraseToStartOfCurrentLine();
+        }
+
+        pub fn eraseEntireCurrentLine(self: Self) !usize {
+            return self.frontend.eraseEntireCurrentLine();
         }
 
         pub fn format(
@@ -107,10 +131,33 @@ pub fn Printer(comptime Frontend: type) type {
             _ = options;
             _ = writer;
         }
+
+        // Debug Helper Functions
+        pub fn DEBUG_displayReadBuffer(self: Self, buffer: []u8, length: usize) !void {
+            try self.saveCursor();
+            try self.moveCursor(.{ .x = 30, .y = 2 });
+
+            _ = try self.write(" " ** 50);
+            try self.moveCursor(.{ .x = 30, .y = 2 });
+            for (buffer[0..length]) |c| {
+                if (c < 0x21) {
+                    try self.print("0x{x} ", .{c});
+                } else {
+                    try self.print("{c}    ", .{c});
+                }
+            }
+            try self.moveCursor(.{ .x = 30, .y = 3 });
+            _ = try self.write(" " ** 50);
+            try self.moveCursor(.{ .x = 30, .y = 3 });
+            for (buffer[0..length]) |c| {
+                try self.print("0x{x} ", .{c});
+            }
+            try self.restoreCursor();
+        }
     };
 }
 
 // Helper function to create a printer with type inference
-pub fn create_printer(frontend: anytype) Printer(@TypeOf(frontend.*)) {
+pub fn createPrinter(frontend: anytype) Printer(@TypeOf(frontend.*)) {
     return Printer(@TypeOf(frontend.*)).init(frontend);
 }

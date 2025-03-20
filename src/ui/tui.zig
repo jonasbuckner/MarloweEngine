@@ -15,16 +15,34 @@ const MOVE_CURSOR_DOWN  = "\x1b[{d}B";
 const MOVE_CURSOR_RIGHT = "\x1b[{d}C";
 const MOVE_CURSOR_LEFT  = "\x1b[{d}D";
 const MOVE_CURSOR_LFCR  = "\x1b[1E";
+const CURSOR_POSITION   = "\x1b[6n";
+const ERASE_EOL         = "\x1b[0K";
+const ERASE_SOL         = "\x1b[1K";
+const ERASE_ENTIRE_LINE = "\x1b[2K";
 // zig fmt: on
+
+const TuiErrorCodes = error{
+    InvalidReturnCode,
+};
 
 pub const Tui = struct {
     const stdout = std.io.getStdOut();
+    const stderr = std.io.getStdErr();
     const stdin = std.io.getStdIn();
     var saved_terminal_state: posix.termios = undefined;
     var tty: posix.fd_t = undefined;
+    var tabstop: usize = 8;
+
+    pub fn TabStop() usize {
+        return tabstop;
+    }
 
     pub fn write(_: *const Tui, bytes: []const u8) !usize {
         return stdout.write(bytes);
+    }
+
+    pub fn writeErr(_: *const Tui, bytes: []const u8) !usize {
+        return stderr.write(bytes);
     }
 
     pub fn writeByte(_: *const Tui, byte: u8) !usize {
@@ -32,19 +50,19 @@ pub const Tui = struct {
         return stdout.write(@as([]const u8, &byte_array));
     }
 
-    pub fn move_cursor(_: *const Tui, location: Location) !void {
+    pub fn moveCursor(_: *const Tui, location: Location) !void {
         try stdout.writer().print(MOVE_CURSOR_FMT, .{ location.y, location.x });
     }
 
-    pub fn save_cursor(_: *const Tui) !void {
+    pub fn saveCursor(_: *const Tui) !void {
         _ = try stdout.write(SAVE_CURSOR);
     }
 
-    pub fn restore_cursor(_: *const Tui) !void {
+    pub fn restoreCursor(_: *const Tui) !void {
         _ = try stdout.write(RESTORE_CURSOR);
     }
 
-    pub fn move_cursor_direction(_: *const Tui, comptime direction: Direction, count: usize) !void {
+    pub fn moveCursorDirection(_: *const Tui, comptime direction: Direction, count: usize) !void {
         const fmt = comptime switch (direction) {
             .up => MOVE_CURSOR_UP,
             .down => MOVE_CURSOR_DOWN,
@@ -55,16 +73,72 @@ pub const Tui = struct {
         _ = try stdout.writer().print(fmt, .{count});
     }
 
-    pub fn clear_screen(self: *const Tui) !void {
+    pub fn clearScreen(self: *const Tui) !void {
         _ = try self.write(CLEAR_SCREEN);
     }
 
-    pub fn move_cursor_home(self: *const Tui) !void {
+    pub fn moveCursorHome(self: *const Tui) !void {
         _ = try self.write(HOME_POSITION);
     }
 
-    pub fn move_cursor_newline(self: *const Tui) !void {
+    pub fn moveCursorNewline(self: *const Tui) !void {
         _ = try self.write(MOVE_CURSOR_LFCR);
+    }
+
+    pub fn cursorPosition(self: *const Tui) !Location {
+        try stdout.writer().writeAll(CURSOR_POSITION);
+
+        // TODO: Investigate whether this would be better with a series of readBytes
+        var pos_buff = std.mem.zeroes([10]u8);
+        _ = try self.read(&pos_buff);
+
+        var x: usize = 0;
+        var y: usize = 0;
+
+        var i: u8 = 0;
+        if (std.ascii.isControl(pos_buff[i])) {
+            i += 1; // ESC
+        } else {
+            return TuiErrorCodes.InvalidReturnCode;
+        }
+        if (pos_buff[i] == '[') {
+            i += 1;
+        } else {
+            return TuiErrorCodes.InvalidReturnCode;
+        }
+
+        var x_buf = std.mem.zeroes([4]u8);
+        var y_buf = std.mem.zeroes([4]u8);
+        if (std.ascii.isDigit(pos_buff[i])) {
+            var y_count: u8 = 0;
+            while (pos_buff[i] != ';') {
+                if (std.ascii.isDigit(pos_buff[i])) {
+                    y_buf[y_count] = pos_buff[i];
+                    y_count += 1;
+                }
+                i += 1;
+            }
+            const y_number = y_buf[0..y_count];
+            y = try std.fmt.parseUnsigned(usize, y_number, 10);
+
+            i += 1; // ';'
+
+            var x_count: u8 = 0;
+            while (pos_buff[i] != 'R') {
+                if (std.ascii.isDigit(pos_buff[i])) {
+                    x_buf[x_count] = pos_buff[i];
+                    x_count += 1;
+                }
+                i += 1;
+            }
+            const x_number = x_buf[0..x_count];
+            x = try std.fmt.parseUnsigned(usize, x_number, 10);
+        } else {
+            try self.print("| {s} {d} |", .{ pos_buff, i });
+            return TuiErrorCodes.InvalidReturnCode;
+        }
+
+        return .{ .x = x, .y = y };
     }
 
     pub fn print(_: *const Tui, comptime fmt: []const u8, args: anytype) anyerror!void {
@@ -77,6 +151,22 @@ pub const Tui = struct {
 
     pub fn read(_: *const Tui, buffer: []u8) anyerror!usize {
         return stdin.reader().read(buffer);
+    }
+
+    pub fn eraseCharacterUnderCursor(self: *const Tui) !void {
+        return self.writeByte(' ');
+    }
+
+    pub fn eraseToEndOfCurrentLine(self: *const Tui) !usize {
+        return self.write(ERASE_EOL);
+    }
+
+    pub fn eraseToStartOfCurrentLine(self: *const Tui) !usize {
+        return self.write(ERASE_SOL);
+    }
+
+    pub fn eraseEntireCurrentLine(self: *const Tui) !usize {
+        return self.write(ERASE_ENTIRE_LINE);
     }
     // pub fn format(self: @This(), comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
     //     return std.fmt.format(stdout.writer(), fmt, args);
@@ -93,8 +183,16 @@ pub const Tui = struct {
         }
         try self.makeRaw();
 
-        _ = try self.clear_screen();
-        _ = try self.move_cursor_home();
+        // Determine the width of a tab for this terminal
+        _ = try self.clearScreen();
+        _ = try self.moveCursorHome();
+        const first_cursor_position = self.cursorPosition() catch Location.empty();
+        _ = try self.writeByte('\t');
+        const second_cursor_position = self.cursorPosition() catch Location.empty();
+        tabstop = second_cursor_position.x - first_cursor_position.x;
+
+        _ = try self.clearScreen();
+        _ = try self.moveCursorHome();
     }
 
     pub fn teardown(_: *const Tui) !void {

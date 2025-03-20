@@ -7,14 +7,18 @@ const Screen  = @import("ui/screen.zig");
 const builder = @import("backends/backend.zig");
 const data    = @import("backends/hardcoded.zig");
 const CommandProcessor = @import("command_processor.zig").CommandProcessor;
+const TextInput = @import("ui/elements/text_input.zig").TextInput;
 // zig fmt: on
 
 const Item = @import("item.zig").Item;
 const Exit = @import("exit.zig").Exit;
 const Room = @import("room.zig").Room;
 
+const Location = Screen.Location;
+
 const posix = std.posix;
-const printer = print.create_printer(&tui.instance);
+const printer = print.createPrinter(&tui.instance);
+const printerface = print.PrinterFace.createPrinterFace(&printer);
 
 const Character = struct {
     inventory: [1]Item,
@@ -32,17 +36,17 @@ const World = struct {
 };
 
 fn print_current_room(player: Character) !void {
-    try printer.clear_to_end_of_current_line();
+    _ = try printer.eraseToEndOfCurrentLine();
     var last_len = try printer.write(player.location.*.title);
 
-    try printer.move_cursor_down(2);
-    try printer.move_cursor_left(last_len);
-    try printer.clear_to_end_of_current_line();
+    try printer.moveCursorDown(2);
+    try printer.moveCursorLeft(last_len);
+    _ = try printer.eraseToEndOfCurrentLine();
     last_len = try printer.write(player.location.*.description);
 
-    try printer.move_cursor_down(2);
-    try printer.move_cursor_left(last_len);
-    try printer.clear_to_end_of_current_line();
+    try printer.moveCursorDown(2);
+    try printer.moveCursorLeft(last_len);
+    _ = try printer.eraseToEndOfCurrentLine();
     _ = try printer.write("Exits to the: ");
 
     for (player.location.exits) |e| {
@@ -57,12 +61,67 @@ fn print_current_room(player: Character) !void {
 }
 
 fn start_game(player: Character, world: World) !void {
-    _ = try printer.print_at_location(.{ .x = 1, .y = 1 }, "MARLOWE");
-    _ = try printer.print_at_location(.{ .x = 2, .y = 2 }, world.map.title);
-    _ = try printer.move_cursor(.{ .x = 2, .y = 4 });
+    _ = try printer.printAtLocation(.{ .x = 1, .y = 1 }, "MARLOWE");
+    _ = try printer.printAtLocation(.{ .x = 2, .y = 2 }, world.map.title);
+    _ = try printer.moveCursor(.{ .x = 2, .y = 4 });
     _ = try print_current_room(player);
-    _ = try printer.print_at_location(.{ .x = 2, .y = 9 }, "# ");
+    _ = try printer.printAtLocation(.{ .x = 2, .y = 9 }, "# ");
 }
+
+fn pack_u32(characters: [4]u32) u32 {
+    var result: u32 = 0;
+    result &= characters[3];
+    result &= (characters[2] << 8);
+    result &= (characters[1] << 16);
+    result &= (characters[0] << 24);
+    return result;
+}
+
+// zig fmt: off
+// TODO: Move this somewhere and make it
+//       generic for multiple input types
+const ControlCodes = enum {
+    escape,
+    left,
+    right,
+    up,
+    down,
+    home,
+    end,
+    pgup,
+    pgdn,
+    del,
+    ins,
+    tab,
+    bs,
+    newline,
+    nomatch,
+
+    pub fn match(keycode: []const u8) ControlCodes {
+        const keymap = std.StaticStringMap(ControlCodes).initComptime(.{
+            .{"\x1b",    .escape },
+            .{"\x1b[D",  .left   },
+            .{"\x1b[C",  .right  },
+            .{"\x1b[A",  .up     },
+            .{"\x1b[B",  .down   },
+            .{"\x1b[1~", .home   },
+            .{"\x1b[4~", .end    },
+            .{"\x1b[5~", .pgup   },
+            .{"\x1b[6~", .pgdn   },
+            .{"\x1b[3~", .del    },
+            .{"\x1b[2~", .ins    },
+            .{"\t",      .tab    },
+            .{"\x7f",    .bs     },
+            .{"\n",      .newline},
+            .{"\r",      .newline},
+        });
+
+        return keymap.get(keycode) orelse .nomatch;
+    }
+};
+// zig fmt: on;
+
+const BUFFER_LENGTH = 255;
 
 pub fn main() !void {
     //std.c.setlocale(std.c.LC.CTYPE, "");
@@ -76,7 +135,7 @@ pub fn main() !void {
     const allocator = arena.allocator();
 
     var data_instance = data.Data.init(&allocator, 2);
-    const backend = builder.create_data_layer(&data_instance);
+    const backend = builder.createDataLayer(&data_instance);
 
     const overworld = Map{
         .title = "Overworld",
@@ -94,81 +153,75 @@ pub fn main() !void {
     };
 
     const commands = CommandProcessor.commands;
-    const BUFFER_LENGTH = 255;
 
-    var mark_dirty = false;
-    var command_buffer = std.mem.zeroes([BUFFER_LENGTH]u8);
-    var processed_buffer: []const u8 = undefined;
+    var processed_buffer: []u8 = undefined;
+
+    try start_game(player, main_world);
+
+    var main_command_input = TextInput.init(allocator, 256, &printerface);
 
     main_loop: while (true) {
         try start_game(player, main_world);
 
-        var cursor_start: usize = 0;
-        if (!mark_dirty) {
-            command_buffer = std.mem.zeroes([BUFFER_LENGTH]u8);
-            try printer.clear_to_end_of_current_line();
-        } else {
-            cursor_start = try printer.write(processed_buffer);
-        }
-
-        var i: usize = cursor_start;
-        while (command_buffer[i] != '\n') {
+        while (true) {
             var read_buffer = std.mem.zeroes([BUFFER_LENGTH]u8);
             const command_length = try printer.read(&read_buffer);
-            for (0..command_length) |j| {
-                command_buffer[i + j] = read_buffer[j];
-            }
 
-            if (command_buffer[i] == '\x1b') {
-                if (command_buffer[i + 1] == 0) {
-                    _ = try printer.move_cursor_down(1);
-                    _ = try printer.move_cursor_newline();
+            const button = ControlCodes.match(read_buffer[0..command_length]);
+            switch (button) {
+                .escape => {
+                    _ = try printer.moveCursorDown(1);
+                    _ = try printer.moveCursorNewline();
                     break :main_loop;
-                } else if (command_buffer[i + 1] == '[') {
-                    switch (command_buffer[i + 2]) {
-                        'D' => {
-                            try printer.move_cursor_left(1);
-                        },
-                        'C' => {
-                            try printer.move_cursor_right(1);
-                        },
-                        else => {},
+                },
+                .up => {},
+                .down => {},
+                .left => {
+                    try main_command_input.moveCursorLeft(1);
+                },
+                .right => {
+                    try main_command_input.moveCursorRight(1);
+                },
+                .tab => {
+                    const tab: []u8 = @constCast("\t");
+                    _ = try main_command_input.insertText(tab);
+                },
+                .home => {
+                    try main_command_input.moveCursorHome();
+                },
+                .end => {
+                    try main_command_input.moveCursorEnd();
+                },
+                .ins => {
+                    main_command_input.insert_mode = !main_command_input.insert_mode;
+                },
+                .bs => {
+                    _ = try main_command_input.backspace();
+                },
+                .del => {
+                    _ = try main_command_input.delete();
+                },
+                .newline => {
+                    // _ = try printer.saveCursor();
+                    processed_buffer = main_command_input.printable_char_buffer.items[0..];
+                    for (processed_buffer[0..], 0..) |c, i| {
+                        processed_buffer[i] = std.ascii.toLower(c);
                     }
-
-                    command_buffer[i] = 0;
-                    command_buffer[i + 1] = 0;
-                    command_buffer[i + 2] = 0;
-                }
-            } else if (command_buffer[i] == std.ascii.control_code.del) {
-                if (i > 0) {
-                    command_buffer[i] = 0;
-                    try printer.move_cursor_left(1);
-                    _ = try printer.writeByte(' ');
-                    try printer.move_cursor_left(1);
-                    i = i - 1;
-                }
-            } else if (command_buffer[i] == '\n' or command_buffer[i] == '\r') {
-                _ = try printer.save_cursor();
-                for (command_buffer, 0..) |c, j| {
-                    command_buffer[j] = std.ascii.toLower(c);
-                }
-                processed_buffer = command_buffer[0..i];
-                break;
-            } else {
-                if (i >= BUFFER_LENGTH) {
-                    continue;
-                }
-                _ = try printer.writeByte(command_buffer[i]);
-                i += 1;
+                    break;
+                },
+                else => {
+                    _ = try main_command_input.insertText(read_buffer[0..command_length]);
+                },
             }
         }
 
-        const read_command = std.meta.stringToEnum(commands, processed_buffer) orelse .nomatch;
+        const trimmed_buffer: []const u8 = std.mem.trim(u8, processed_buffer, &std.ascii.whitespace);
+        const read_command = std.meta.stringToEnum(commands, trimmed_buffer) orelse .nomatch;
 
         switch (read_command) {
             .quit => {
-                _ = try printer.move_cursor_down(1);
-                _ = try printer.move_cursor_newline();
+                _ = try printer.moveCursorDown(1);
+                _ = try printer.moveCursorNewline();
                 break;
             },
             .north, .south, .east, .west, .in, .out => {
@@ -176,31 +229,28 @@ pub fn main() !void {
                     if (e.direction == read_command) {
                         player.location = @constCast(e.room);
 
-                        try printer.move_cursor_left(i);
-                        try printer.clear_to_end_of_current_line();
-                        _ = try printer.move_cursor_down(1);
-                        _ = try printer.move_cursor_newline();
-                        try printer.clear_to_end_of_current_line();
-                        mark_dirty = false;
+                        try main_command_input.clear();
+                        _ = try printer.saveCursor();
+                        _ = try printer.moveCursorDown(1);
+                        _ = try printer.moveCursorNewline();
+                        _ = try printer.eraseToEndOfCurrentLine();
+                        _ = try printer.restoreCursor();
                         break;
                     }
                 } else {
-                    _ = try printer.move_cursor_down(1);
-                    _ = try printer.move_cursor_newline();
+                    _ = try printer.moveCursorDown(1);
+                    _ = try printer.moveCursorNewline();
                     _ = try printer.write("No Exit in that direction");
-                    _ = try printer.restore_cursor();
-                    mark_dirty = true;
+                    _ = try printer.restoreCursor();
+                        try main_command_input.clear();
                 }
             },
             else => {
-                // _ = try printer.save_cursor();
-                command_buffer[i] = 0;
-                _ = try printer.move_cursor_down(1);
-                _ = try printer.move_cursor_newline();
+                _ = try printer.moveCursorDown(1);
+                _ = try printer.moveCursorNewline();
                 _ = try printer.write("Command not found");
-                _ = try printer.restore_cursor();
-                // @memset(&command_buffer, 0);
-                mark_dirty = true;
+                _ = try printer.restoreCursor();
+                try main_command_input.clear();
             },
         }
         std.posix.nanosleep(0, 16000);

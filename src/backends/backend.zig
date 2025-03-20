@@ -14,6 +14,6 @@ pub fn DataBuilder(comptime Backend: type) type {
     };
 }
 
-pub fn create_data_layer(backend: anytype) DataBuilder(@TypeOf(backend.*)) {
+pub fn createDataLayer(backend: anytype) DataBuilder(@TypeOf(backend.*)) {
     return DataBuilder(@TypeOf(backend.*)).init(backend);
 }

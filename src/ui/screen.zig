@@ -6,6 +6,10 @@ pub const Direction = enum {
 };
 
 pub const Location = struct {
-    x: u16,
-    y: u16,
+    x: usize,
+    y: usize,
+
+    pub fn empty() Location {
+        return .{ .x = 0, .y = 0 };
+    }
 };
