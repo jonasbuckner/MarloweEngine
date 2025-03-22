@@ -11,6 +11,8 @@ pub const TextInput = struct {
     cursor_position_in_pcb: usize = 0,
 
     insert_mode: bool = true,
+    insert_mode_prompt: u8 = '#',
+    overwrite_mode_prompt: u8 = '>',
 
     character_mapping: std.ArrayList(DisplayMapping),
 
@@ -192,6 +194,20 @@ pub const TextInput = struct {
         self.cursor_position_in_pcb = 0;
         _ = try self.printer.moveCursor(self.position_on_display);
         _ = try self.printer.eraseToEndOfCurrentLine();
+    }
+
+    pub fn toggleInsertMode(self: *TextInput) !void {
+        self.insert_mode = !self.insert_mode;
+
+        try self.printer.saveCursor();
+        const prompt_location = Location { .x = self.position_on_display.x - 2, .y = self.position_on_display.y };
+        try self.printer.moveCursor(prompt_location);
+        if (self.insert_mode) {
+            _ = try self.printer.writeByte(self.insert_mode_prompt);
+        } else {
+            _ = try self.printer.writeByte(self.overwrite_mode_prompt);
+        }
+        try self.printer.restoreCursor();
     }
 
     /////////////////////////////////

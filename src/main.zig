@@ -135,6 +135,8 @@ pub fn main() !void {
     const allocator = arena.allocator();
 
     var data_instance = data.Data.init(&allocator, 2);
+    defer data_instance.deleteRooms() catch {};
+
     const backend = builder.createDataLayer(&data_instance);
 
     const overworld = Map{
@@ -193,7 +195,7 @@ pub fn main() !void {
                     try main_command_input.moveCursorEnd();
                 },
                 .ins => {
-                    main_command_input.insert_mode = !main_command_input.insert_mode;
+                    try main_command_input.toggleInsertMode();
                 },
                 .bs => {
                     _ = try main_command_input.backspace();
