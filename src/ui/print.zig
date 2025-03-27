@@ -3,6 +3,7 @@ const std = @import("std");
 const screen = @import("screen.zig");
 const Location = screen.Location;
 const Direction = screen.Direction;
+const Dimensions = screen.Dimensions;
 
 pub const PrinterFace = @import("printer_face.zig");
 
@@ -19,6 +20,10 @@ pub fn Printer(comptime Frontend: type) type {
             return .{
                 .frontend = frontend,
             };
+        }
+
+        pub fn Screen(self: Self) Dimensions {
+            return self.frontend.Screen();
         }
 
         pub fn setup(self: Self) !void {

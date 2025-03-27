@@ -8,6 +8,7 @@ const builder = @import("backends/backend.zig");
 const data    = @import("backends/hardcoded.zig");
 const CommandProcessor = @import("command_processor.zig").CommandProcessor;
 const TextInput = @import("ui/elements/text_input.zig").TextInput;
+const Box = @import("ui/elements/box.zig").Box;
 // zig fmt: on
 
 const Item = @import("item.zig").Item;
@@ -65,7 +66,6 @@ fn start_game(player: Character, world: World) !void {
     _ = try printer.printAtLocation(.{ .x = 2, .y = 2 }, world.map.title);
     _ = try printer.moveCursor(.{ .x = 2, .y = 4 });
     _ = try print_current_room(player);
-    _ = try printer.printAtLocation(.{ .x = 2, .y = 9 }, "# ");
 }
 
 fn pack_u32(characters: [4]u32) u32 {
@@ -153,17 +153,23 @@ pub fn main() !void {
         .description = "",
         .location = &overworld.rooms.items[0],
     };
+    const window_dimensions = printer.Screen();
+    // const box_size = Dimensions.offset(.{ .x = -2, .y = -2 });
+
+    var empty_box = Box.init(.{ .x = 1, .y = 1 }, window_dimensions, allocator, &printerface);
 
     const commands = CommandProcessor.commands;
 
     var processed_buffer: []u8 = undefined;
 
-    try start_game(player, main_world);
-
     var main_command_input = TextInput.init(allocator, 256, &printerface);
+    main_command_input.movePosition(.{ .x = 4, .y = 9 });
+
 
     main_loop: while (true) {
         try start_game(player, main_world);
+        try main_command_input.prompt();
+        try empty_box.render();
 
         while (true) {
             var read_buffer = std.mem.zeroes([BUFFER_LENGTH]u8);
@@ -176,8 +182,12 @@ pub fn main() !void {
                     _ = try printer.moveCursorNewline();
                     break :main_loop;
                 },
-                .up => {},
-                .down => {},
+                .up => {
+                    // pass/noop
+                },
+                .down => {
+                    // pass/noop
+                },
                 .left => {
                     try main_command_input.moveCursorLeft(1);
                 },
@@ -232,6 +242,8 @@ pub fn main() !void {
                         player.location = @constCast(e.room);
 
                         try main_command_input.clear();
+
+                        // Clear any previous errors
                         _ = try printer.saveCursor();
                         _ = try printer.moveCursorDown(1);
                         _ = try printer.moveCursorNewline();
@@ -242,15 +254,16 @@ pub fn main() !void {
                 } else {
                     _ = try printer.moveCursorDown(1);
                     _ = try printer.moveCursorNewline();
-                    _ = try printer.write("No Exit in that direction");
+                    _ = try printer.write(" No Exit in that direction");
                     _ = try printer.restoreCursor();
                         try main_command_input.clear();
                 }
             },
             else => {
+                // empty_box.render() catch {};
                 _ = try printer.moveCursorDown(1);
                 _ = try printer.moveCursorNewline();
-                _ = try printer.write("Command not found");
+                _ = try printer.write(" Command not found");
                 _ = try printer.restoreCursor();
                 try main_command_input.clear();
             },

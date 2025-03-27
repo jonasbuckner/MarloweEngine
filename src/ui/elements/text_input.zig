@@ -47,6 +47,24 @@ pub const TextInput = struct {
         self.character_mapping.deinit();
     }
 
+    pub fn movePosition(self: *TextInput, new_position: Location) void {
+        // TODO: Move all text and clear old text, move cursor, etc.
+        self.position_on_display = new_position;
+    }
+
+    pub fn prompt(self: *TextInput) !void {
+        try self.printer.saveCursor();
+        const prompt_location = Location { .x = self.position_on_display.x - 2, .y = self.position_on_display.y };
+        try self.printer.moveCursor(prompt_location);
+        if (self.insert_mode) {
+            _ = try self.printer.writeByte(self.insert_mode_prompt);
+        } else {
+            _ = try self.printer.writeByte(self.overwrite_mode_prompt);
+        }
+        try self.printer.restoreCursor();
+        self.printer.moveCursor(self.position_on_display) catch {};
+    }
+
     pub fn appendText(self: *TextInput, text_buffer: []u8) !usize {
         try self.printable_char_buffer.appendSlice(text_buffer);
         const size = try self.printer.write(text_buffer);

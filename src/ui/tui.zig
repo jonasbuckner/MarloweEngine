@@ -1,7 +1,8 @@
 const std = @import("std");
-const screen = @import("screen.zig");
-const Location = screen.Location;
-const Direction = screen.Direction;
+const screenzig = @import("screen.zig");
+const Location = screenzig.Location;
+const Direction = screenzig.Direction;
+const Dimensions = screenzig.Dimensions;
 const posix = std.posix;
 
 // zig fmt: off
@@ -32,9 +33,14 @@ pub const Tui = struct {
     var saved_terminal_state: posix.termios = undefined;
     var tty: posix.fd_t = undefined;
     var tabstop: usize = 8;
+    var dimensions: Dimensions = undefined;
 
     pub fn TabStop() usize {
         return tabstop;
+    }
+
+    pub fn Screen(_: *const Tui) Dimensions {
+        return dimensions;
     }
 
     pub fn write(_: *const Tui, bytes: []const u8) !usize {
@@ -182,6 +188,27 @@ pub const Tui = struct {
             return;
         }
         try self.makeRaw();
+
+        var winsize: std.posix.winsize = .{
+            .row = 0,
+            .col = 0,
+            .xpixel = 0, // unused
+            .ypixel = 0, // unused
+        };
+        const err = posix.system.ioctl(tty, posix.T.IOCGWINSZ, @intFromPtr(&winsize));
+
+        if (posix.errno(err) == .SUCCESS) {
+            dimensions = .{
+                .height = @as(usize, winsize.row),
+                .width = @as(usize, winsize.col),
+            };
+        } else {
+            std.log.debug("failed to determine terminal size; using conservative guess 80x25", .{});
+            dimensions = .{
+                .height = 25,
+                .width = 80,
+            };
+        }
 
         // Determine the width of a tab for this terminal
         _ = try self.clearScreen();

@@ -2,6 +2,7 @@
 const std = @import("std");
 const Location = @import("screen.zig").Location;
 const Direction = @import("screen.zig").Direction;
+const Dimensions = @import("screen.zig").Dimensions;
 
 pub const PrinterFace = struct {
     // Function pointers for the interface
@@ -26,6 +27,7 @@ pub const PrinterFace = struct {
     readFn: *const fn (ctx: *const anyopaque, buffer: []u8) anyerror!usize,
     tabStopFn: *const fn (ctx: *const anyopaque) usize, // TabStop now takes ctx parameter
 
+    ScreenFn: *const fn (ctx: *const anyopaque) Dimensions,
     // Instance pointer (similar to 'this' or 'self')
     ctx: *const anyopaque,
 
@@ -114,6 +116,10 @@ pub const PrinterFace = struct {
     pub fn printAtLocation(self: *const PrinterFace, location: Location, text: []const u8) !usize {
         try self.moveCursor(location);
         return self.write(text);
+    }
+
+    pub fn Screen(self: *const PrinterFace) Dimensions {
+        return self.ScreenFn(self.ctx);
     }
 };
 
@@ -209,6 +215,11 @@ pub fn createPrinterFace(printer: anytype) PrinterFace {
             const self = @as(PtrType, @ptrCast(@alignCast(ctx)));
             return self.TabStop();
         }
+
+        pub fn ScreenImpl(ctx: *const anyopaque) Dimensions {
+            const self = @as(PtrType, @ptrCast(@alignCast(ctx)));
+            return self.Screen();
+        }
     };
 
     return PrinterFace{
@@ -229,6 +240,7 @@ pub fn createPrinterFace(printer: anytype) PrinterFace {
         .readByteFn = Impls.readByteImpl,
         .readFn = Impls.readImpl,
         .tabStopFn = Impls.tabStopImpl,
+        .ScreenFn = Impls.ScreenImpl,
         .ctx = @ptrCast(@alignCast(printer)),
     };
 }
