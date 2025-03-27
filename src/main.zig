@@ -154,9 +154,9 @@ pub fn main() !void {
         .location = &overworld.rooms.items[0],
     };
     const window_dimensions = printer.Screen();
-    // const box_size = Dimensions.offset(.{ .x = -2, .y = -2 });
+    const box_size = window_dimensions.offset(.{ .x = -2, .y = -2 });
 
-    var empty_box = Box.init(.{ .x = 1, .y = 1 }, window_dimensions, allocator, &printerface);
+    var empty_box = Box.init(.{ .x = 1, .y = 1 }, box_size, allocator, &printerface);
 
     const commands = CommandProcessor.commands;
 
