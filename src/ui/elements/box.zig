@@ -26,7 +26,7 @@ pub const Box = struct {
 
     pub fn init(position: Location, dimensions: Dimensions, allocator: std.mem.Allocator, printer: *const PrinterFace) Box {
         var real_position = position;
-        var real_dimensions = dimensions;
+        var real_dimensions = dimensions.offset(.{ .x = -2, .y = -2 }); // Offset to account for drawn characters
         if (position.x <= 0 or position.y <= 0) {
             std.debug.print("Rows and Columns are 1-based, defaulting to 1", .{});
             real_position.x = @max(1, position.x);
