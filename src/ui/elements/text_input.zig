@@ -354,23 +354,23 @@ pub const TextInput = struct {
         self.printer.restoreCursor() catch {};
     }
 
-    pub fn DEBUG_printTextInput(self: *TextInput) !void {
-        try self.printer.saveCursor();
+    pub fn DEBUG_printTextInput(self: *TextInput) void {
+        self.printer.saveCursor() catch {};
         if (self.printable_char_buffer.items.len > 0) {
-        _ = try self.printer.moveCursor(.{ .x = 50, .y = 1 });
-        _ = try self.printer.eraseToEndOfCurrentLine();
-        try self.printer.print("cursor_position_in_pcb: {d}\t0x{x}", .{ self.cursor_position_in_pcb, self.printable_char_buffer.items[self.cursor_position_in_pcb - 1] });
+        _ = self.printer.moveCursor(.{ .x = 50, .y = 1 }) catch {};
+        _ = self.printer.eraseToEndOfCurrentLine() catch {};
+        self.printer.print("cursor_position_in_pcb: {d}\t0x{x}", .{ self.cursor_position_in_pcb, self.printable_char_buffer.items[self.cursor_position_in_pcb - 1] }) catch {};
         }
-        _ = try self.printer.moveCursor(.{ .x = 50, .y = 2 });
-        _ = try self.printer.eraseToEndOfCurrentLine();
-        try self.printer.print("char_buffer len: {d}", .{ self.printable_char_buffer.items.len });
-        _ = try self.printer.moveCursor(.{ .x = 50, .y = 4 });
-        _ = try self.printer.eraseToEndOfCurrentLine();
-        try self.printer.print("position_on_display: {d}:{d}", .{ self.position_on_display.x, self.position_on_display.y });
-        _ = try self.printer.moveCursor(.{ .x = 50, .y = 5 });
-        _ = try self.printer.eraseToEndOfCurrentLine();
-        try self.printer.print("cursor_position_on_display: {d}:{d}", .{ self.cursor_position_on_display.x, self.cursor_position_on_display.y });
-        try self.printer.restoreCursor();
+        _ = self.printer.moveCursor(.{ .x = 50, .y = 2 }) catch {};
+        _ = self.printer.eraseToEndOfCurrentLine() catch {};
+        self.printer.print("char_buffer len: {d}", .{ self.printable_char_buffer.items.len }) catch {};
+        _ = self.printer.moveCursor(.{ .x = 50, .y = 4 }) catch {};
+        _ = self.printer.eraseToEndOfCurrentLine() catch {};
+        self.printer.print("position_on_display: {d}:{d}", .{ self.position_on_display.x, self.position_on_display.y }) catch {};
+        _ = self.printer.moveCursor(.{ .x = 50, .y = 5 }) catch {};
+        _ = self.printer.eraseToEndOfCurrentLine() catch {};
+        self.printer.print("cursor_position_on_display: {d}:{d}", .{ self.cursor_position_on_display.x, self.cursor_position_on_display.y }) catch {};
+        self.printer.restoreCursor() catch {};
     }
 };
 // zig fmt: on

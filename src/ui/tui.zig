@@ -93,54 +93,47 @@ pub const Tui = struct {
 
     pub fn cursorPosition(self: *const Tui) !Location {
         try stdout.writer().writeAll(CURSOR_POSITION);
-
-        // TODO: Investigate whether this would be better with a series of readBytes
-        var pos_buff = std.mem.zeroes([10]u8);
-        _ = try self.read(&pos_buff);
+        var response = try self.readByte();
+        while (!std.ascii.isControl(response)) {
+            response = try self.readByte();
+        }
 
         var x: usize = 0;
         var y: usize = 0;
 
-        var i: u8 = 0;
-        if (std.ascii.isControl(pos_buff[i])) {
-            i += 1; // ESC
-        } else {
-            return TuiErrorCodes.InvalidReturnCode;
-        }
-        if (pos_buff[i] == '[') {
-            i += 1;
-        } else {
-            return TuiErrorCodes.InvalidReturnCode;
+        while (response != '[') {
+            response = try self.readByte();
         }
 
         var x_buf = std.mem.zeroes([4]u8);
         var y_buf = std.mem.zeroes([4]u8);
-        if (std.ascii.isDigit(pos_buff[i])) {
+
+        response = try self.readByte();
+        if (std.ascii.isDigit(response)) {
             var y_count: u8 = 0;
-            while (pos_buff[i] != ';') {
-                if (std.ascii.isDigit(pos_buff[i])) {
-                    y_buf[y_count] = pos_buff[i];
+            while (response != ';') {
+                if (std.ascii.isDigit(response)) {
+                    y_buf[y_count] = response;
                     y_count += 1;
                 }
-                i += 1;
+                response = try self.readByte();
             }
             const y_number = y_buf[0..y_count];
             y = try std.fmt.parseUnsigned(usize, y_number, 10);
 
-            i += 1; // ';'
+            response = try self.readByte(); // ;
 
             var x_count: u8 = 0;
-            while (pos_buff[i] != 'R') {
-                if (std.ascii.isDigit(pos_buff[i])) {
-                    x_buf[x_count] = pos_buff[i];
+            while (response != 'R') {
+                if (std.ascii.isDigit(response)) {
+                    x_buf[x_count] = response;
                     x_count += 1;
                 }
-                i += 1;
+                response = try self.readByte();
             }
             const x_number = x_buf[0..x_count];
             x = try std.fmt.parseUnsigned(usize, x_number, 10);
         } else {
-            try self.print("| {s} {d} |", .{ pos_buff, i });
             return TuiErrorCodes.InvalidReturnCode;
         }
 
